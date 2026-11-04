@@ -8,6 +8,9 @@ backend/uploads/
 frontend/node_modules/
 frontend/dist/
 
+# Entorno
+.env
+.env.local
 
 # IDE
 .idea/
