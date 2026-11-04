@@ -1,0 +1,87 @@
+name: punto-venta-no-seguro
+
+services:
+
+  mysql:
+    image: mysql:8.4
+    container_name: pv-mysql
+    restart: unless-stopped
+    environment:
+      # VULNERABILIDAD: usuario root con password debil
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: punto_venta
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app123
+    command: >
+      --local-infile=1
+      --log-bin-trust-function-creators=1
+      --skip-name-resolve=0
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - pv-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pv-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/punto_venta?useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root123
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/uploads:/app/uploads
+    networks:
+      - pv-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pv-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+    networks:
+      - pv-net
+
+  adminer:
+    image: adminer:5
+    container_name: pv-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    ports:
+      - "8081:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - pv-net
+
+volumes:
+  mysql-data:
+
+networks:
+  pv-net:
+    driver: bridge

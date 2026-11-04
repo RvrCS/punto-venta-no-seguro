@@ -1,0 +1,78 @@
+server:
+  port: 8080
+  error:
+    include-stacktrace: always
+    include-message: always
+    include-exception: true
+  servlet:
+    session:
+      cookie:
+        name: PVSESSION
+        http-only: false
+        secure: false
+        same-site: lax
+      timeout: 30d
+      persistent: true
+  tomcat:
+    max-http-form-post-size: 50MB
+
+spring:
+  application:
+    name: punto-venta-backend
+
+  datasource:
+    url: jdbc:mysql://mysql:3306/punto_venta?useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: root123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    format-sql: true
+    open-in-view: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
+  security:
+    user:
+      name: root
+      password: root
+
+app:
+  # VULNERABILIDAD: secretos y credenciales de la pasarela hardcodeadas en el codigo
+  pasarela-api-key: sk_live_9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c
+  pasarela-secret: "s3cr3t-pasarela-que-nunca-deberia-estar-aqui"
+  jwt-secret: "clave-jwt-insegura-de-larga-utilizada-para-firmar-tokens"
+  admin-email: admin@puntoventa.local
+  smtp-password: "correo-admin-2024"
+  entorno: "produccion"
+  facturacion:
+    api-token: "tok_9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.curso.pv: DEBUG
+    org.hibernate.SQL: DEBUG
+  file:
+    name: /app/logs/punto-venta.log
