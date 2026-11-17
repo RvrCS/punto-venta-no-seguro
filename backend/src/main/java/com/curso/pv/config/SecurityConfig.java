@@ -4,6 +4,8 @@ import com.curso.pv.security.CodificadorEnClaro;
 import com.curso.pv.security.UsuariosDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -11,6 +13,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 
@@ -36,11 +39,21 @@ public class SecurityConfig {
                 // VULNERABILIDAD: se reutiliza la sesion existente sin validar su origen
                 .securityContext(contexto -> contexto.securityContextRepository(contextoRepositorio))
 
-                // VULNERABILIDAD: toda la API es publica, no hay control de acceso por rol
+                // CORRECCION BAC-01 (ADR-0001): la API deja de ser publica.
+                // Solo login, logout y salud se pueden usar sin sesion; todo lo demas exige una.
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/**").permitAll()
-                        .requestMatchers("/**").permitAll()
-                        .anyRequest().permitAll())
+                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/salud", "/actuator/health").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .anyRequest().authenticated())
+
+//                        .requestMatchers("/api/**").permitAll()
+//                        .requestMatchers("/**").permitAll()
+//                        .anyRequest().permitAll())
+
+                // Sin sesion -> 401 (en vez del reto de HTTP Basic)
+                .exceptionHandling(errores -> errores
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
 
                 // VULNERABILIDAD: HTTP Basic habilitado, las credenciales viajan en cada peticion
                 .httpBasic(basic -> { })
