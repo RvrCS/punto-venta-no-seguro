@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.HtmlUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -38,7 +39,11 @@ public class ReporteControlador {
     @GetMapping(value = "/exportar/html", produces = MediaType.TEXT_HTML_VALUE)
     public String exportarHtml(@RequestParam(required = false) String nombreCliente,
                                @RequestParam(defaultValue = "COMPLETADA") String estado) {
-        return servicio.exportarHtml(nombreCliente, estado);
+
+        // CORRECCIÓN: Escapar el parámetro para neutralizar etiquetas HTML/JavaScript
+        String clienteSeguro = (nombreCliente != null) ? HtmlUtils.htmlEscape(nombreCliente) : "General";
+
+        return servicio.exportarHtml(clienteSeguro, estado);
     }
 
     @GetMapping(value = "/exportar/csv", produces = "text/csv")
