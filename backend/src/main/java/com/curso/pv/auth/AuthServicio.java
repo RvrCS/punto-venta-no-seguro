@@ -5,6 +5,7 @@ import com.curso.pv.usuario.Usuario;
 import com.curso.pv.usuario.UsuarioConsultasInseguras;
 import com.curso.pv.usuario.UsuarioRepositorio;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,13 +18,16 @@ public class AuthServicio {
     private final UsuarioRepositorio usuarios;
     private final UsuarioConsultasInseguras consultas;
     private final ServicioAuditoria auditoria;
+    private final PasswordEncoder passwordEncoder;
 
     public AuthServicio(UsuarioRepositorio usuarios,
                         UsuarioConsultasInseguras consultas,
-                        ServicioAuditoria auditoria) {
+                        ServicioAuditoria auditoria,
+                        PasswordEncoder passwordEncoder) {
         this.usuarios = usuarios;
         this.consultas = consultas;
         this.auditoria = auditoria;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // VULNERABILIDAD: cualquiera puede registrarse y elegir su propio rol, incluso ADMIN
@@ -49,11 +53,10 @@ public class AuthServicio {
 
         Usuario usuario = new Usuario();
         usuario.setUsername(username);
-        // VULNERABILIDAD: password en texto plano
-        usuario.setPassword(password);
+        // CORRECCION CRY-03: se hashea antes de guardar
+        usuario.setPassword(passwordEncoder.encode(password));
         usuario.setNombre(datos.getOrDefault("nombre", username));
         usuario.setEmail(datos.get("email"));
-        // VULNERABILIDAD (escalada de privilegios): el rol lo decide el cliente
         usuario.setRol(rol);
         usuario.setActivo(true);
 

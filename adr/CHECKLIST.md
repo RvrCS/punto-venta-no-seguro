@@ -60,7 +60,7 @@ Leyenda: ✅ cumple · ❌ no cumple · 🔧 corregido en este avance · ⏭️ 
 | 5.4 | Sin secretos en el repositorio                 |        |          |       |        |
 | 5.5 | Codificación (base64) no usada como protección |        |          |       |        |
 | 5.6 | TLS hacia la BD y HTTPS                        |        |          |       |        |
-
+| 5.1 | Contraseñas con hash adaptativo y sal          | 🔧     | CRY-03   | A02   | Information disclosure, Spoofing |
 ## 6. Gestión de sesiones
 
 | #   | Control                                    | Estado | Hallazgo | OWASP | STRIDE |

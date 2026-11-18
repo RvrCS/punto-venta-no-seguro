@@ -8,19 +8,14 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * VULNERABILIDAD: codificador de contrasenas que devuelve el valor tal cual.
- * Las contrasenas quedan almacenadas en texto plano, sin hash ni salt.
+ * CORRECCION CRY-03: ya no implementa PasswordEncoder ni "cifra" devolviendo
+ * el valor tal cual. Las contrasenas se hashean con BCryptPasswordEncoder
+ * (bean definido en SecurityConfig). Esta clase solo conserva el helper que
+ * traduce el rol guardado en la base a una autoridad de Spring Security.
  */
-public class CodificadorEnClaro implements PasswordEncoder {
+public final class CodificadorEnClaro {
 
-    @Override
-    public String encode(CharSequence passwordBruto) {
-        return passwordBruto != null ? passwordBruto.toString() : null;
-    }
-
-    @Override
-    public boolean matches(CharSequence passwordBruto, String passwordAlmacenado) {
-        return passwordBruto != null && passwordBruto.toString().equals(passwordAlmacenado);
+    private CodificadorEnClaro() {
     }
 
     public static Collection<GrantedAuthority> autoridadesDe(String rol) {

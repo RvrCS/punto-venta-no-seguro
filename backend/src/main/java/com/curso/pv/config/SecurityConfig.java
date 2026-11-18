@@ -1,6 +1,5 @@
 package com.curso.pv.config;
 
-import com.curso.pv.security.CodificadorEnClaro;
 import com.curso.pv.security.UsuariosDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +11,8 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
@@ -40,16 +41,11 @@ public class SecurityConfig {
                 .securityContext(contexto -> contexto.securityContextRepository(contextoRepositorio))
 
                 // CORRECCION BAC-01 (ADR-0001): la API deja de ser publica.
-                // Solo login, logout y salud se pueden usar sin sesion; todo lo demas exige una.
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/salud", "/actuator/health").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
-
-//                        .requestMatchers("/api/**").permitAll()
-//                        .requestMatchers("/**").permitAll()
-//                        .anyRequest().permitAll())
 
                 // Sin sesion -> 401 (en vez del reto de HTTP Basic)
                 .exceptionHandling(errores -> errores
@@ -74,11 +70,18 @@ public class SecurityConfig {
         return repositorio;
     }
 
+    // CORRECCION CRY-03: BCrypt con factor de costo 10 (el valor por defecto de Spring).
+    // encode() genera un salt distinto cada vez; matches() lo extrae del hash almacenado.
     @Bean
-    public DaoAuthenticationProvider proveedorDeAutenticacion(UsuariosDetailsService detailsService) {
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public DaoAuthenticationProvider proveedorDeAutenticacion(UsuariosDetailsService detailsService,
+                                                              PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider proveedor = new DaoAuthenticationProvider(detailsService);
-        // VULNERABILIDAD: comparacion de contrasenas en texto plano
-        proveedor.setPasswordEncoder(new CodificadorEnClaro());
+        proveedor.setPasswordEncoder(passwordEncoder);
         return proveedor;
     }
 

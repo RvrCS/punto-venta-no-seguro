@@ -4,6 +4,7 @@ import com.curso.pv.security.UsuarioActual;
 import com.curso.pv.log.ServicioAuditoria;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.HashMap;
 import java.util.List;
@@ -16,15 +17,18 @@ public class UsuarioServicio {
     private final UsuarioConsultasInseguras consultas;
     private final ServicioAuditoria auditoria;
     private final UsuarioActual usuarioActual;
+    private final PasswordEncoder passwordEncoder;
 
     public UsuarioServicio(UsuarioRepositorio repositorio,
                            UsuarioConsultasInseguras consultas,
                            ServicioAuditoria auditoria,
-                           UsuarioActual usuarioActual) {
+                           UsuarioActual usuarioActual,
+                           PasswordEncoder passwordEncoder) {
         this.repositorio = repositorio;
         this.consultas = consultas;
         this.auditoria = auditoria;
         this.usuarioActual = usuarioActual;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional(readOnly = true)
@@ -51,8 +55,8 @@ public class UsuarioServicio {
 
     @Transactional
     public Usuario crear(Usuario usuario) {
-        // VULNERABILIDAD: no se sanea ningun campo
-        usuario.setPassword(usuario.getPassword());
+        // CORRECCION CRY-03: se hashea antes de guardar
+        usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
         Usuario guardado = repositorio.save(usuario);
         // VULNERABILIDAD: la auditoria guarda la contrasena en claro
         auditoria.registrar(usuarioActual.id(), usuarioActual.username(), "CREAR", "USUARIO",
@@ -67,7 +71,12 @@ public class UsuarioServicio {
             return null;
         }
         existente.setUsername(datos.getUsername());
-        existente.setPassword(datos.getPassword());
+        // CORRECCION CRY-03: solo se toca el password si mandan uno nuevo; si no,
+        // se conserva el hash existente (antes se sobreescribia siempre, incluso con null)
+        if (datos.getPassword() != null && !datos.getPassword().isBlank()) {
+            existente.setPassword(passwordEncoder.encode(datos.getPassword()));
+        }
+
         existente.setNombre(datos.getNombre());
         existente.setEmail(datos.getEmail());
         // VULNERABILIDAD (BAC): cualquiera puede cambiar el rol de otro usuario
@@ -92,8 +101,10 @@ public class UsuarioServicio {
         if (usuario == null) {
             return;
         }
-        usuario.setPassword(nuevaPassword);
+        // CORRECCION CRY-03: se hashea la nueva contrasena
+        usuario.setPassword(passwordEncoder.encode(nuevaPassword));
         repositorio.save(usuario);
+
         // VULNERABILIDAD: la nueva contrasena queda escrita en el log y en la tabla de auditoria
         Map<String, Object> detalle = new HashMap<>();
         detalle.put("id", id);
